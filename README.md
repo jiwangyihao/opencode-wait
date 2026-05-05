@@ -7,7 +7,7 @@
 > **Initial in v0.1.0 | v0.1.0 初始版本**
 >
 > - Adds a standalone OpenCode `wait` tool plugin | 新增独立 OpenCode `wait` 工具插件
-> - Supports timed waits with a 30-second minimum | 支持最短 30 秒的计时等待
+> - Supports exact positive timed waits | 支持按请求秒数计时等待
 > - Supports waiting for new user messages in the current session | 支持等待当前会话的新用户消息
 
 [中文](#中文) | [English](#english)
@@ -24,8 +24,8 @@
 
 ## 功能一览
 
-- **计时等待** — `wait({ seconds })` 会等待指定秒数，最短 30 秒。
-- **参数归一化** — 缺失、无效、小于 30 的 `seconds` 会按 30 秒处理。
+- **计时等待** — `wait({ seconds })` 会按请求的正数秒数等待。
+- **参数归一化** — 缺失、无效或非正数 `seconds` 会立即完成，不会偷偷等待。
 - **事件等待** — `wait({ until: "new_user_message" })` 会等待当前会话出现新的用户消息。
 - **早退原因** — 计时等待期间如果检测到新用户消息，会提前结束并返回原因。
 - **测试友好** — `createWaitPlugin()` 支持注入时间、睡眠和客户端实现，便于稳定测试。
@@ -92,10 +92,10 @@
 
 ### 验证
 
-在任务中调用 `wait({ seconds: 30 })` 后，返回结果应包含类似信息：
+在任务中调用 `wait({ seconds: 5 })` 后，返回结果应包含类似信息：
 
 ```text
-started: 2026-05-05T00:00:00.000Z; waited: 30s; now: 2026-05-05T00:00:30.000Z
+started: 2026-05-05T00:00:00.000Z; waited: 5s; now: 2026-05-05T00:00:05.000Z
 ```
 
 </details>
@@ -128,7 +128,7 @@ export default createWaitPlugin({
 
 ```json
 {
-  "seconds": 30
+  "seconds": 5
 }
 ```
 
@@ -170,8 +170,8 @@ Use `question` when a real user decision is required. Use `wait` when the only t
 
 ## What You Get
 
-- **Timed waits** — `wait({ seconds })` waits for the requested duration, with a 30-second minimum.
-- **Input normalization** — missing, invalid, or too-small `seconds` values become 30 seconds.
+- **Timed waits** — `wait({ seconds })` waits for the requested positive duration.
+- **Input normalization** — missing, invalid, or non-positive `seconds` values complete immediately instead of silently waiting.
 - **Event waits** — `wait({ until: "new_user_message" })` waits for the current session to receive a new user message.
 - **Early-return reasons** — timed waits can end early when a new user message arrives, and the result explains why.
 - **Test-friendly seams** — `createWaitPlugin()` accepts injected time, sleep, and client implementations for stable tests.
@@ -238,10 +238,10 @@ First read the latest GitHub Release for opencode-wait and execute the exact ver
 
 ### Verification
 
-Calling `wait({ seconds: 30 })` should return a result similar to:
+Calling `wait({ seconds: 5 })` should return a result similar to:
 
 ```text
-started: 2026-05-05T00:00:00.000Z; waited: 30s; now: 2026-05-05T00:00:30.000Z
+started: 2026-05-05T00:00:00.000Z; waited: 5s; now: 2026-05-05T00:00:05.000Z
 ```
 
 </details>
@@ -274,7 +274,7 @@ Timed wait:
 
 ```json
 {
-  "seconds": 30
+  "seconds": 5
 }
 ```
 

@@ -390,7 +390,7 @@ export type WaitToolInput = {
 }
 ```
 
-保留其余逻辑不变，包括 `MIN_WAIT_SECONDS`、`DEFAULT_USER_MESSAGE_POLL_INTERVAL_MS`、`USER_MESSAGE_LOOKBACK_LIMIT`、`createWaitTool()`、synthetic 判定和 unavailable 返回文案。
+保留其余逻辑不变，包括 `DEFAULT_USER_MESSAGE_POLL_INTERVAL_MS`、`USER_MESSAGE_LOOKBACK_LIMIT`、`createWaitTool()`、synthetic 判定和 unavailable 返回文案。后续版本已取消等待下限，正数 `seconds` 按请求秒数等待，缺失、无效或非正数立即完成。
 
 - [ ] **步骤 2：创建真实 OpenCode 插件入口**
 
@@ -645,11 +645,11 @@ export default createWaitPlugin({
 
 ## 用法
 
-计时等待最短为 30 秒，缺失或无效的 `seconds` 会归一化为 30 秒：
+计时等待按请求的正数秒数执行；缺失、无效或非正数 `seconds` 会立即完成：
 
 ```json
 {
-  "seconds": 30
+  "seconds": 5
 }
 ```
 

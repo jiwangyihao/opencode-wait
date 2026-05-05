@@ -29,7 +29,7 @@
 ### `opencode-wait` 拥有的能力
 
 - `wait` tool 定义。
-- `seconds` 参数：可选，最小等待时间为 30 秒，无效值归一化为 30 秒。
+- `seconds` 参数：可选，正数按请求秒数等待；缺失、无效或非正数立即完成。
 - `until` 参数：支持 `new_user_message`。
 - 等待新用户消息时读取当前 session messages。
 - 识别真实用户消息与插件合成用户消息。
@@ -51,8 +51,8 @@
 
 1. 工具名为 `wait`。
 2. 工具描述必须表达：它用于不需要用户确认的无人值守等待、后台任务、冷却时间或预期事件，是区别于 `question` 的等待路径。
-3. `seconds` 小于 30、缺失、非数字、`NaN`、`0` 或负数时，等待时间归一化为 30 秒。
-4. 有效非整数秒数向下取整。
+3. `seconds` 为正数时按请求秒数等待；缺失、非数字、`NaN`、`0` 或负数时立即完成，不再静默等待。
+4. 有效非整数秒数向下取整，向下取整后为 0 时立即完成。
 5. 返回值包含 `started`、`waited`、`now`，并保留现有 `ended` 标签：超时结束不额外标注，真实或合成用户消息早退时标注 `ended: early`，事件模式命中时标注 `ended: event`，事件不可用时标注 `ended: unavailable`。
 6. 当等待期间出现新的真实用户消息时，提前结束并返回 `reason: new user message`。
 7. 当等待期间出现插件合成用户消息时，提前结束并返回 `reason: new user message (synthetic)`；合成消息的判定以 `role: "user"` 且任一 part 带有 `synthetic: true` 为准。
