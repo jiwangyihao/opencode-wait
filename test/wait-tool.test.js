@@ -1,5 +1,5 @@
-import test from "node:test"
 import assert from "node:assert/strict"
+import test from "node:test"
 
 import { createWaitTool } from "../dist/wait-tool.js"
 
@@ -23,7 +23,7 @@ test("wait tool description directs unattended waits away from question", () => 
   assert.match(wait.description ?? "", /do not require user confirmation|without user confirmation/i)
 })
 
-test("wait tool enforces minimum 30 seconds", async () => {
+test("wait tool honors positive seconds below 30", async () => {
   let sleptMs = 0
   const wait = createWaitTool({
     sleep: async (ms) => {
@@ -33,10 +33,10 @@ test("wait tool enforces minimum 30 seconds", async () => {
 
   await wait.execute({ seconds: 5 }, createContext())
 
-  assert.equal(sleptMs, 30_000)
+  assert.equal(sleptMs, 5_000)
 })
 
-test("wait tool normalizes invalid seconds to 30", async () => {
+test("wait tool treats missing invalid or non-positive seconds as immediate", async () => {
   const calls = []
   const wait = createWaitTool({
     sleep: async (ms) => {
@@ -49,7 +49,7 @@ test("wait tool normalizes invalid seconds to 30", async () => {
   await wait.execute({ seconds: 0 }, createContext())
   await wait.execute({ seconds: -9 }, createContext())
 
-  assert.deepEqual(calls, [30_000, 30_000, 30_000, 30_000])
+  assert.deepEqual(calls, [0, 0, 0, 0])
 })
 
 test("wait tool rounds valid non-integer seconds down", async () => {
@@ -257,6 +257,39 @@ test("wait tool catches user messages that arrive before the initial session sna
   assert.match(result, /ended: early/i)
   assert.match(result, /reason: new user message;/i)
   assert.match(result, /message: m2/i)
+})
+
+test("wait tool returns unavailable when event session messages cannot be read", async () => {
+  const cases = [
+    async () => undefined,
+    async () => {
+      throw new Error("session read failed")
+    },
+  ]
+
+  for (const messages of cases) {
+    let timeout
+    const wait = createWaitTool({
+      now: () => 1_700_000_000_000,
+      pollIntervalMs: 1,
+      client: {
+        session: {
+          messages,
+        },
+      },
+    })
+
+    const result = await Promise.race([
+      wait.execute({ until: "new_user_message" }, createContext()),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("wait did not resolve")), 50)
+      }),
+    ]).finally(() => clearTimeout(timeout))
+
+    assert.match(result, /ended: unavailable/i)
+    assert.match(result, /event: new_user_message/i)
+    assert.match(result, /reason: session messages unavailable/i)
+  }
 })
 
 test("wait tool returns unavailable for event wait without session messages", async () => {

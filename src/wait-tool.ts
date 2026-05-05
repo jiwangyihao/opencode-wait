@@ -36,7 +36,6 @@ type UserMessageObservation = {
 
 type WaitUntilEvent = "new_user_message"
 
-const MIN_WAIT_SECONDS = 30
 const DEFAULT_USER_MESSAGE_POLL_INTERVAL_MS = 1_000
 const USER_MESSAGE_LOOKBACK_LIMIT = 20
 
@@ -46,8 +45,8 @@ function toIso(ms: number) {
 
 function normalizeSeconds(value: unknown) {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed) || parsed <= 0) return MIN_WAIT_SECONDS
-  return Math.max(MIN_WAIT_SECONDS, Math.floor(parsed))
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0
+  return Math.floor(parsed)
 }
 
 function normalizePollIntervalMs(value: unknown) {
@@ -153,10 +152,12 @@ async function waitForNewUserMessage(input: {
     if (input.signal.aborted) return undefined
 
     const nextMessages = await readRecentUserMessages(input).catch(() => undefined)
-    const newMessage = nextMessages?.find((message) => !knownMessageIDs.has(message.id))
+    if (!nextMessages) return undefined
+
+    const newMessage = nextMessages.find((message) => !knownMessageIDs.has(message.id))
     if (newMessage) return newMessage
 
-    for (const message of nextMessages ?? []) {
+    for (const message of nextMessages) {
       knownMessageIDs.add(message.id)
     }
   }
@@ -202,7 +203,7 @@ export function createWaitTool(input: WaitToolInput = {}) {
   return tool({
     description: "Wait in background for unattended tasks that do not require user confirmation, including long-running work, cooldowns, or expected non-user events. Use until: \"new_user_message\" to wait until the current session receives a new user message, including plugin-synthesized notifications.",
     args: {
-      seconds: tool.schema.number().optional().describe("How long to wait in seconds (minimum 30)."),
+      seconds: tool.schema.number().optional().describe("How long to wait in seconds. Positive values are honored as requested; missing, invalid, or non-positive values complete immediately."),
       until: tool.schema.string().optional().describe("Event to wait for. Currently supported: new_user_message."),
     },
     async execute(args, context) {
@@ -221,6 +222,7 @@ export function createWaitTool(input: WaitToolInput = {}) {
       const controller = new AbortController()
       const outcomes: Promise<
         | { type: "timeout" }
+        | { type: "unavailable"; event: WaitUntilEvent }
         | { type: "user-message"; message: UserMessageObservation }
       >[] = []
       if (seconds !== undefined) {
@@ -241,13 +243,24 @@ export function createWaitTool(input: WaitToolInput = {}) {
         pollIntervalMs,
         signal: controller.signal,
       }).then((message) => {
-        if (!message) return new Promise<never>(() => {})
+        if (!message) {
+          if (eventOnly) return { type: "unavailable" as const, event: "new_user_message" as const }
+          return new Promise<never>(() => {})
+        }
         return { type: "user-message" as const, message }
       }))
 
       const outcome = await Promise.race(outcomes)
       controller.abort()
       const finished = now()
+
+      if (outcome.type === "unavailable") {
+        return formatUnavailableEventResult({
+          started,
+          finished,
+          event: outcome.event,
+        })
+      }
 
       if (outcome.type === "user-message") {
         return formatUserMessageResult({
