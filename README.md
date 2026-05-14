@@ -3,6 +3,9 @@
 [![npm version](https://img.shields.io/npm/v/opencode-wait.svg)](https://www.npmjs.com/package/opencode-wait)
 [![npm downloads](https://img.shields.io/npm/dw/opencode-wait.svg)](https://www.npmjs.com/package/opencode-wait)
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL--2.0-brightgreen.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/jiwangyihao/opencode-wait?style=social)](https://github.com/jiwangyihao/opencode-wait/stargazers)
+
+套件导航 / Suite: [OpenCode J Super Suite](https://github.com/jiwangyihao/opencode-j-super-suite)
 
 > **Initial in v0.1.0 | v0.1.0 初始版本**
 >
